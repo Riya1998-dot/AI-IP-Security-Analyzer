@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+from streamlit_geolocation import streamlit_geolocation
 
 st.set_page_config(
     page_title="AI IP Security Analyzer",
@@ -8,89 +9,73 @@ st.set_page_config(
 )
 
 st.title("🛡️ AI IP Security Analyzer")
-st.caption("Live IP Intelligence and Security Risk Analysis")
+st.caption("Live IP Intelligence and Current Location Analysis")
 
 st.divider()
 
-if st.button("🔍 Analyze My IP", use_container_width=True):
+# Get current location from browser
+location = streamlit_geolocation()
 
-    try:
-        # Step 1: Get public IP
-        ip_response = requests.get(
-            "https://api.ipify.org?format=json",
-            timeout=10
-        )
+if st.button("🔍 Analyze My Current Location", use_container_width=True):
 
-        ip = ip_response.json()["ip"]
+    if location and location != "No Location Info":
 
-        # Step 2: Get IP location and network information
-        url = f"http://ip-api.com/json/{ip}"
+        latitude = location.get("latitude")
+        longitude = location.get("longitude")
+        accuracy = location.get("accuracy")
 
-        response = requests.get(url, timeout=10)
-        data = response.json()
+        st.success("Current Location Detected!")
 
-        if data.get("status") != "success":
-            st.error("Unable to retrieve IP location information.")
-            st.write(data)
-            st.stop()
-
-        city = data.get("city", "Unknown")
-        region = data.get("regionName", "Unknown")
-        country = data.get("country", "Unknown")
-        isp = data.get("isp", "Unknown")
-
-        # Risk calculation
-        risk_score = 20
-
-        # Example rule-based analysis
-        if not city or city == "Unknown":
-            risk_score += 20
-
-        if not isp or isp == "Unknown":
-            risk_score += 20
-
-        if risk_score <= 35:
-            status = "🟢 LOW RISK"
-            message = "Network appears normal."
-
-        elif risk_score <= 65:
-            status = "🟡 MEDIUM RISK"
-            message = "Some network characteristics require attention."
-
-        else:
-            status = "🔴 HIGH RISK"
-            message = "Potentially suspicious network characteristics detected."
-
-        # Display results
-        st.success("IP Analysis Completed!")
-
-        st.subheader("🌐 Network Information")
+        st.subheader("📍 Current Location")
 
         col1, col2 = st.columns(2)
 
         with col1:
-            st.metric("IP Address", ip)
-            st.write("📍 **City:**", city)
-            st.write("🌍 **Country:**", country)
+            st.metric("Latitude", f"{latitude:.6f}")
+            st.write("🎯 **Accuracy:**", f"{accuracy:.2f} meters")
 
         with col2:
-            st.write("🏢 **ISP:**", isp)
-            st.write("🗺️ **Region:**", region)
+            st.metric("Longitude", f"{longitude:.6f}")
 
         st.divider()
 
-        st.subheader("🤖 Security Analysis")
+        # Get approximate address from coordinates
+        try:
+            geo_url = (
+                "https://nominatim.openstreetmap.org/reverse"
+                f"?lat={latitude}&lon={longitude}&format=json"
+            )
 
-        st.metric("Security Risk Score", f"{risk_score}/100")
-        st.progress(risk_score)
+            response = requests.get(
+                geo_url,
+                headers={"User-Agent": "Streamlit Location Analyzer"},
+                timeout=10
+            )
 
-        st.subheader(status)
-        st.write(message)
+            data = response.json()
+            address = data.get("address", {})
 
-        st.divider()
+            city = (
+                address.get("city")
+                or address.get("town")
+                or address.get("village")
+                or "Unknown"
+            )
 
-        st.caption("AI IP Security Analyzer | Python + Streamlit")
+            state = address.get("state", "Unknown")
+            country = address.get("country", "Unknown")
 
-    except Exception as e:
-        st.error("Error connecting to the IP detection service.")
-        st.write(e)
+            st.subheader("🌍 Location Information")
+
+            st.write("📍 **City:**", city)
+            st.write("🗺️ **State:**", state)
+            st.write("🌎 **Country:**", country)
+
+        except Exception:
+            st.warning("Location coordinates detected, but address details could not be retrieved.")
+
+    else:
+        st.warning("Please click the location button and allow location permission first.")
+
+st.divider()
+st.caption("AI IP Security Analyzer | Python + Streamlit")
