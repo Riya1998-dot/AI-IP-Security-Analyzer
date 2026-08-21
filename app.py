@@ -13,22 +13,61 @@ st.caption("Live IP Intelligence and Current Location Analysis")
 
 st.divider()
 
-# Get browser location
+# Get browser/device location
 location = streamlit_geolocation()
 
-if st.button("📍 Detect My Current Location", use_container_width=True):
+if st.button("🔍 Analyze My IP & Location", use_container_width=True):
+
+    # ---------------------------------
+    # 1. DETECT IP ADDRESS
+    # ---------------------------------
+
+    try:
+        ip_response = requests.get(
+            "https://api.ipify.org?format=json",
+            timeout=10
+        )
+
+        public_ip = ip_response.json().get(
+            "ip",
+            "Unknown"
+        )
+
+    except Exception:
+        public_ip = "Unknown"
+
+    # ---------------------------------
+    # 2. GET CURRENT LOCATION
+    # ---------------------------------
 
     latitude = None
     longitude = None
     accuracy = None
 
-    # Check whether location data exists
     if isinstance(location, dict):
         latitude = location.get("latitude")
         longitude = location.get("longitude")
         accuracy = location.get("accuracy")
 
-    # Check whether coordinates are available
+    # ---------------------------------
+    # DISPLAY IP ADDRESS
+    # ---------------------------------
+
+    st.success("Analysis Started Successfully!")
+
+    st.subheader("🌐 IP Information")
+
+    st.metric(
+        "Public IP Address",
+        public_ip
+    )
+
+    st.divider()
+
+    # ---------------------------------
+    # CHECK LOCATION
+    # ---------------------------------
+
     if latitude is None or longitude is None:
 
         st.warning(
@@ -39,12 +78,19 @@ if st.button("📍 Detect My Current Location", use_container_width=True):
 
         st.success("Current Location Detected Successfully!")
 
+        # ---------------------------------
+        # COORDINATES
+        # ---------------------------------
+
         st.subheader("📍 Current Coordinates")
 
         col1, col2 = st.columns(2)
 
         with col1:
-            st.metric("Latitude", f"{float(latitude):.6f}")
+            st.metric(
+                "Latitude",
+                f"{float(latitude):.6f}"
+            )
 
             if accuracy is not None:
                 st.write(
@@ -53,11 +99,17 @@ if st.button("📍 Detect My Current Location", use_container_width=True):
                 )
 
         with col2:
-            st.metric("Longitude", f"{float(longitude):.6f}")
+            st.metric(
+                "Longitude",
+                f"{float(longitude):.6f}"
+            )
 
         st.divider()
 
-        # Convert coordinates into location details
+        # ---------------------------------
+        # CONVERT COORDINATES TO LOCATION
+        # ---------------------------------
+
         try:
 
             geo_url = (
@@ -74,7 +126,11 @@ if st.button("📍 Detect My Current Location", use_container_width=True):
             )
 
             data = response.json()
-            address = data.get("address", {})
+
+            address = data.get(
+                "address",
+                {}
+            )
 
             city = (
                 address.get("city")
@@ -84,23 +140,46 @@ if st.button("📍 Detect My Current Location", use_container_width=True):
                 or "Unknown"
             )
 
-            state = address.get("state", "Unknown")
-            country = address.get("country", "Unknown")
+            state = address.get(
+                "state",
+                "Unknown"
+            )
 
-            st.subheader("🌍 Current Location Information")
+            country = address.get(
+                "country",
+                "Unknown"
+            )
+
+            # ---------------------------------
+            # DISPLAY LOCATION
+            # ---------------------------------
+
+            st.subheader(
+                "🌍 Current Location Information"
+            )
 
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                st.metric("City", city)
+                st.metric(
+                    "City",
+                    city
+                )
 
             with col2:
-                st.metric("State", state)
+                st.metric(
+                    "State",
+                    state
+                )
 
             with col3:
-                st.metric("Country", country)
+                st.metric(
+                    "Country",
+                    country
+                )
 
-        except Exception as e:
+        except Exception:
+
             st.warning(
                 "Coordinates were detected, but address information could not be retrieved."
             )
